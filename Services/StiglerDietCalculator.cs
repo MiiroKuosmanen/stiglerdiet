@@ -3,9 +3,10 @@ using sitglerdiet;
 using Google.OrTools.LinearSolver;
 public class StiglerDietCalculator
 {
-    public string? CalculateDiet(Calculate calculate, List<Food> foods2)
+    public CalculateResult CalculateDiet(Calculate calculate, List<Food> foods2)
     {
-        /// conver calculate to array of tuples (String Name, double Value)[] nutrients
+        var result = new CalculateResult();
+        /// Convert the list of nutrients to a tuple array.
         (string Name, double Value)[] nutrients = new (string Name, double Value)[]
         {
             ("Calories", calculate.Calories ?? 0),
@@ -14,9 +15,7 @@ public class StiglerDietCalculator
             ("Fat", calculate.Fat ?? 0),
             ("Fiber", calculate.Fiber ?? 0)
         };
-
-        /// foods contains list of food objects, convert it to array of tuples (String Name, double Price, double[] Nutrients)[] data
-        /// where Nutrients is an array of doubles with the same length as nutrients
+        /// Convert the list of foods to a tuple array.
         (string Name, double Price, double[] Nutrients)[] data = new (string Name, double Price, double[] Nutrients)[foods2.Count];
         for (int i = 0; i < foods2.Count; ++i)
         {
@@ -34,8 +33,8 @@ public class StiglerDietCalculator
         {
             foods.Add(solver.MakeNumVar(0.0, double.PositiveInfinity, data[i].Name));
         }
-        Console.WriteLine($"Number of variables = {solver.NumVariables()}");
-
+        //create json object that contains variables, constrai
+        ///Console.WriteLine($"Number of variables = {solver.NumVariables()}");
         List<Constraint> constraints = new List<Constraint>();
         for (int i = 0; i < nutrients.Length; ++i)
         {
@@ -47,7 +46,8 @@ public class StiglerDietCalculator
             }
             constraints.Add(constraint);
         }
-        Console.WriteLine($"Number of constraints = {solver.NumConstraints()}");
+        result.Constraints = constraints.Count;
+        ///Console.WriteLine($"Number of constraints = {solver.NumConstraints()}");
 
         Objective objective = solver.Objective();
         for (int i = 0; i < data.Length; ++i)
@@ -81,6 +81,10 @@ public class StiglerDietCalculator
             if (foods[i].SolutionValue() > 0.0)
             {
                 Console.WriteLine($"{data[i].Name}: ${365 * foods[i].SolutionValue():N2}");
+                result.Foods = new AnnualFoods {
+                    Name = nutrients[i].Name,
+                    Price = nutrients[i].Value
+                };
                 for (int j = 0; j < nutrients.Length; ++j)
                 {
                     nutrientsResult[j] += data[i].Nutrients[j] * foods[i].SolutionValue();
@@ -88,7 +92,7 @@ public class StiglerDietCalculator
             }
         }
         Console.WriteLine($"\nOptimal annual price: ${365 * objective.Value():N2}");
-
+        result.OptimalAnnualPrice = 365 * objective.Value();
         Console.WriteLine("\nNutrients per day:");
         for (int i = 0; i < nutrients.Length; ++i)
         {
@@ -98,6 +102,11 @@ public class StiglerDietCalculator
         Console.WriteLine("\nAdvanced usage:");
         Console.WriteLine($"Problem solved in {solver.WallTime()} milliseconds");
         Console.WriteLine($"Problem solved in {solver.Iterations()} iterations");
-        return "test";
+        result.Advanced = new AdvancedUsage
+        {
+            SolvedTime = solver.WallTime(),
+            SolvedIterations = solver.Iterations()
+        };
+        return result;
     }
 }

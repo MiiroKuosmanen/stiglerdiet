@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using sitglerdiet;
@@ -22,11 +24,8 @@ namespace sitglerdiet.Controllers
         {
             var foods = _context.Foods.ToList();
             var result = _calculator.CalculateDiet(calculate, foods);
-            if (result is null)
-            {
-                return "No solution found.";
-            }
-            return result.ToString();
+            var json = JsonSerializer.Serialize(result);
+            return json;
         }
     }
 }
